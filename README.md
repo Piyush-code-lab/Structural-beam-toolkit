@@ -2,7 +2,6 @@
 
 A full-stack structural engineering web application built with Python and Flask. Goes beyond a simple beam calculator — it analyzes, optimizes, and **explains its reasoning** using classical beam theory, wrapped in a modern browser-based interface.
 
-> **Live Demo:** [your-app.onrender.com](https://your-app.onrender.com) ← update this after deploying
 
 ![Beam Analysis Output](beam_output.png)
 
