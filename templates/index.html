@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Structural Beam Toolkit</title>
+<style>
+  /* ── Tokens ── */
+  :root {
+    --bg:        #0b0f14;
+    --surface:   #131820;
+    --card:      #1a2130;
+    --border:    #26334a;
+    --accent:    #3b82f6;
+    --accent2:   #10b981;
+    --warn:      #f59e0b;
+    --danger:    #ef4444;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --mono:      'JetBrains Mono', 'Fira Code', monospace;
+    --sans:      'Inter', system-ui, sans-serif;
+    --radius:    10px;
+    --transition: 180ms ease;
+  }
+
+  /* ── Reset ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans);
+         font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* ── Layout ── */
+  .shell   { display: flex; min-height: 100vh; }
+  .sidebar { width: 260px; flex-shrink: 0; background: var(--surface);
+             border-right: 1px solid var(--border); padding: 24px 0;
+             position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .main    { flex: 1; padding: 32px 40px; max-width: 960px; }
+
+  /* ── Sidebar nav ── */
+  .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .logo h1 { font-size: 13px; font-weight: 700; letter-spacing: .08em;
+             text-transform: uppercase; color: var(--accent); }
+  .logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .nav-section { padding: 6px 20px 2px; font-size: 10px; font-weight: 700;
+                 letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+                 margin-top: 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 20px;
+              cursor: pointer; color: var(--muted); transition: var(--transition);
+              border-left: 2px solid transparent; font-size: 13px; }
+  .nav-item:hover  { color: var(--text); background: rgba(59,130,246,.07); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent);
+                     background: rgba(59,130,246,.1); }
+  .nav-item .icon  { width: 16px; text-align: center; opacity: .7; }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 28px; }
+  .page-header h2 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .page-header p  { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* ── Cards ── */
+  .card { background: var(--card); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 20px 24px; margin-bottom: 18px; }
+  .card-title { font-size: 11px; font-weight: 700; letter-spacing: .1em;
+                text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+
+  /* ── Form controls ── */
+  .row   { display: grid; gap: 14px; margin-bottom: 14px; }
+  .row-2 { grid-template-columns: 1fr 1fr; }
+  .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  label   { display: block; font-size: 12px; color: var(--muted);
+            font-weight: 500; margin-bottom: 5px; }
+  input, select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px; color: var(--text); font-family: var(--sans);
+    font-size: 13px; transition: var(--transition); outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
+  input::placeholder { color: var(--muted); }
+  select option { background: var(--card); }
+
+  /* ── Support list ── */
+  .support-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .support-row  { display: flex; align-items: center; gap: 10px; background: var(--surface);
+                  border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
+  .support-row .badge { font-size: 10px; font-weight: 700; letter-spacing: .06em;
+                        text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+  .badge-fixed  { background: rgba(239,68,68,.15);  color: #f87171; }
+  .badge-pin    { background: rgba(59,130,246,.15);  color: #60a5fa; }
+  .badge-roller { background: rgba(16,185,129,.15);  color: #34d399; }
+  .support-pos  { font-family: var(--mono); font-size: 12px; color: var(--text); flex: 1; }
+  .remove-btn   { background: none; border: none; color: var(--muted); cursor: pointer;
+                  font-size: 16px; line-height: 1; padding: 0 4px; transition: var(--transition); }
+  .remove-btn:hover { color: var(--danger); }
+
+  .add-support  { display: flex; gap: 8px; margin-bottom: 8px; }
+  .add-support select { flex: 1; }
+  .add-support input  { flex: 1; }
+
+  /* ── Load list ── */
+  .load-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .load-row  { display: grid; grid-template-columns: auto 1fr auto;
+               align-items: center; gap: 10px; background: var(--surface);
+               border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
+  .load-info { font-size: 12px; color: var(--text); font-family: var(--mono); }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px;
+         border-radius: 7px; border: none; cursor: pointer; font-family: var(--sans);
+         font-size: 13px; font-weight: 600; transition: var(--transition); }
+  .btn-primary  { background: var(--accent); color: #fff; }
+  .btn-primary:hover  { background: #2563eb; }
+  .btn-success  { background: var(--accent2); color: #fff; }
+  .btn-success:hover  { background: #059669; }
+  .btn-ghost    { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover    { background: var(--border); }
+  .btn-sm  { padding: 6px 12px; font-size: 12px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* ── Classification pill ── */
+  .classify-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+                   border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px; }
+  .pill-ok   { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+  .pill-err  { background: rgba(239,68,68,.15);  color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+
+  /* ── Results ── */
+  .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+                 margin-bottom: 18px; }
+  .metric { background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px 16px; }
+  .metric-label { font-size: 10px; font-weight: 700; letter-spacing: .1em;
+                  text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 700; font-family: var(--mono); }
+  .metric-unit  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .val-blue   { color: #60a5fa; }
+  .val-green  { color: #34d399; }
+  .val-purple { color: #a78bfa; }
+  .val-amber  { color: #fbbf24; }
+
+  /* ── Pass/Fail badges ── */
+  .check-row  { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .check-badge { display: flex; align-items: center; gap: 6px; padding: 5px 12px;
+                 border-radius: 6px; font-size: 12px; font-weight: 600; }
+  .check-pass { background: rgba(16,185,129,.12); color: #34d399;
+                border: 1px solid rgba(16,185,129,.3); }
+  .check-fail { background: rgba(239,68,68,.12); color: #f87171;
+                border: 1px solid rgba(239,68,68,.3); }
+
+  /* ── Overall status banner ── */
+  .status-banner { padding: 14px 18px; border-radius: 8px; font-weight: 700;
+                   font-size: 15px; margin-bottom: 16px; display: flex;
+                   align-items: center; gap: 10px; }
+  .status-pass { background: rgba(16,185,129,.1); color: #34d399;
+                 border: 1px solid rgba(16,185,129,.3); }
+  .status-fail { background: rgba(239,68,68,.1);  color: #f87171;
+                 border: 1px solid rgba(239,68,68,.3); }
+
+  /* ── Advisor box ── */
+  .advisor-box { background: rgba(245,158,11,.05); border: 1px solid rgba(245,158,11,.25);
+                 border-radius: 8px; padding: 16px 20px; margin-top: 16px; }
+  .advisor-box h4 { font-size: 12px; font-weight: 700; letter-spacing: .08em;
+                    text-transform: uppercase; color: var(--warn); margin-bottom: 10px; }
+  .advisor-box pre { font-family: var(--mono); font-size: 12px; color: var(--text);
+                     white-space: pre-wrap; line-height: 1.7; }
+
+  /* ── Plot ── */
+  .plot-wrap { background: #0d1117; border: 1px solid var(--border);
+               border-radius: 8px; overflow: hidden; margin-top: 16px; }
+  .plot-wrap img { width: 100%; display: block; }
+
+  /* ── Spinner ── */
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3);
+             border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Inline error ── */
+  .inline-error { color: #f87171; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+                  border-radius: 6px; padding: 10px 14px; font-size: 12px;
+                  margin-top: 10px; line-height: 1.6; }
+
+  /* ── Toggle tabs ── */
+  .tab-row  { display: flex; gap: 4px; background: var(--surface); padding: 4px;
+              border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border); }
+  .tab-btn  { flex: 1; padding: 7px; border-radius: 6px; border: none; background: none;
+              color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600;
+              transition: var(--transition); }
+  .tab-btn.active { background: var(--accent); color: #fff; }
+
+  /* ── Solved result highlight ── */
+  .solved-highlight { background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3);
+                      border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; }
+  .solved-highlight .label { font-size: 11px; color: var(--muted); font-weight: 600;
+                              text-transform: uppercase; letter-spacing: .08em; }
+  .solved-highlight .value { font-size: 26px; font-weight: 700; color: var(--accent);
+                             font-family: var(--mono); }
+
+  /* ── Utility ── */
+  .mt-8  { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8  { margin-bottom: 8px; }
+  .text-muted { color: var(--muted); font-size: 12px; }
+  .hidden { display: none !important; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="logo">
+      <h1>Beam Toolkit</h1>
+      <p>Structural Analysis v4.0</p>
+    </div>
+
+    <div class="nav-section">Analysis</div>
+    <div class="nav-item active" data-panel="standard">
+      <span class="icon">▦</span> Standard Analysis
+    </div>
+    <div class="nav-item" data-panel="optimize">
+      <span class="icon">◎</span> Design Optimization
+    </div>
+    <div class="nav-item" data-panel="missing">
+      <span class="icon">◈</span> Missing Parameter
+    </div>
+  </nav>
+
+  <!-- ── Main content ── -->
+  <main class="main">
+
+    <!-- ══════════════════════════════════════
+         PANEL 1 — Standard Analysis
+    ══════════════════════════════════════ -->
+    <div id="panel-standard" class="panel active">
+      <div class="page-header">
+        <h2>Standard Analysis</h2>
+        <p>Place supports to configure the beam, add loads, then run the analysis.</p>
+      </div>
+
+      <!-- Beam geometry -->
+      <div class="card">
+        <div class="card-title">Beam Geometry</div>
+        <div class="row row-2">
+          <div>
+            <label>Beam Length (m)</label>
+            <input type="number" id="s-length" value="6" min="0.1" step="0.1" placeholder="e.g. 6">
+          </div>
+          <div>
+            <label>Serviceability Limit</label>
+            <select id="s-defl-limit">
+              <option value="L/360">L/360 — floors</option>
+              <option value="L/250">L/250 — roofs</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supports -->
+      <div class="card">
+        <div class="card-title">Supports</div>
+        <div class="add-support">
+          <select id="s-sup-type">
+            <option value="Fixed">Fixed</option>
+            <option value="Pin">Pin</option>
+            <option value="Roller">Roller</option>
+          </select>
+          <input type="number" id="s-sup-pos" placeholder="Position (m)" step="0.1" min="0">
+          <button class="btn btn-ghost btn-sm" onclick="addSupport('s')">+ Add</button>
+        </div>
+        <div class="support-list" id="s-support-list"></div>
+        <div id="s-classify-result"></div>
+      </div>
+
+      <!-- Loads -->
+      <div class="card">
+        <div class="card-title">Loads</div>
+        <div class="tab-row">
+          <button class="tab-btn active" id="s-tab-point" onclick="setLoadTab('s','point')">Point Load</button>
+          <button class="tab-btn" id="s-tab-udl" onclick="setLoadTab('s','udl')">UDL</button>
+        </div>
+        <!-- Point load inputs -->
+        <div id="s-point-inputs" class="row row-2 mb-8">
+          <div>
+            <label>Magnitude (kN)</label>
+            <input type="number" id="s-P" placeholder="e.g. 25" step="0.1" min="0">
+          </div>
+          <div>
+            <label>Position (m)</label>
+            <input type="number" id="s-Pa" placeholder="e.g. 3" step="0.1" min="0">
+          </div>
+        </div>
+        <!-- UDL inputs -->
+        <div id="s-udl-inputs" class="row row-3 mb-8 hidden">
+          <div>
+            <label>Intensity (kN/m)</label>
+            <input type="number" id="s-w" placeholder="e.g. 5" step="0.1" min="0">
+          </div>
+          <div>
+            <label>Start (m)</label>
+            <input type="number" id="s-ws" placeholder="0" step="0.1" min="0">
+          </div>
+          <div>
+            <label>End (m)</label>
+            <input type="number" id="s-we" placeholder="6" step="0.1" min="0">
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="addLoad('s')">+ Add Load</button>
+        <div class="load-list mt-8" id="s-load-list"></div>
+      </div>
+
+      <!-- Section & material -->
+      <div class="card">
+        <div class="card-title">Material &amp; Section</div>
+        <div class="tab-row">
+          <button class="tab-btn active" id="s-tab-manual" onclick="setSectionMode('s','manual')">Manual</button>
+          <button class="tab-btn" id="s-tab-auto" onclick="setSectionMode('s','auto')">Auto (lightest)</button>
+        </div>
+        <div class="row row-2">
+          <div>
+            <label>Material</label>
+            <select id="s-material">
+              {% for m in materials %}<option>{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div id="s-section-wrap">
+            <label>IPE Section</label>
+            <select id="s-section">
+              {% for s in sections %}<option>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="s-run-btn" onclick="runAnalysis()">
+        Run Analysis
+      </button>
+      <div id="s-error" class="hidden"></div>
+      <div id="s-results" class="hidden mt-16"></div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════
+         PANEL 2 — Design Optimization
+    ══════════════════════════════════════ -->
+    <div id="panel-optimize" class="panel">
+      <div class="page-header">
+        <h2>Design Optimization</h2>
+        <p>Find the best design across all material and section combinations for your chosen objective.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Beam Geometry</div>
+        <div class="row row-2">
+          <div>
+            <label>Beam Length (m)</label>
+            <input type="number" id="o-length" value="6" min="0.1" step="0.1">
+          </div>
+          <div>
+            <label>Serviceability Limit</label>
+            <select id="o-defl-limit">
+              <option value="L/360">L/360 — floors</option>
+              <option value="L/250">L/250 — roofs</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Supports</div>
+        <div class="add-support">
+          <select id="o-sup-type">
+            <option value="Fixed">Fixed</option>
+            <option value="Pin">Pin</option>
+            <option value="Roller">Roller</option>
+          </select>
+          <input type="number" id="o-sup-pos" placeholder="Position (m)" step="0.1" min="0">
+          <button class="btn btn-ghost btn-sm" onclick="addSupport('o')">+ Add</button>
+        </div>
+        <div class="support-list" id="o-support-list"></div>
+        <div id="o-classify-result"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Loads</div>
+        <div class="tab-row">
+          <button class="tab-btn active" id="o-tab-point" onclick="setLoadTab('o','point')">Point Load</button>
+          <button class="tab-btn" id="o-tab-udl" onclick="setLoadTab('o','udl')">UDL</button>
+        </div>
+        <div id="o-point-inputs" class="row row-2 mb-8">
+          <div><label>Magnitude (kN)</label><input type="number" id="o-P" placeholder="e.g. 20" step="0.1" min="0"></div>
+          <div><label>Position (m)</label><input type="number" id="o-Pa" placeholder="e.g. 3" step="0.1" min="0"></div>
+        </div>
+        <div id="o-udl-inputs" class="row row-3 mb-8 hidden">
+          <div><label>Intensity (kN/m)</label><input type="number" id="o-w" placeholder="e.g. 5" step="0.1" min="0"></div>
+          <div><label>Start (m)</label><input type="number" id="o-ws" placeholder="0" step="0.1" min="0"></div>
+          <div><label>End (m)</label><input type="number" id="o-we" placeholder="6" step="0.1" min="0"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="addLoad('o')">+ Add Load</button>
+        <div class="load-list mt-8" id="o-load-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Optimization Objective</div>
+        <div class="row row-2">
+          <div>
+            <label>Objective</label>
+            <select id="o-objective">
+              <option value="weight">Minimum Weight</option>
+              <option value="cost">Minimum Material Cost</option>
+              <option value="safety">Maximum Factor of Safety</option>
+              <option value="deflection">Minimum Deflection</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-success btn-full" id="o-run-btn" onclick="runOptimize()">
+        Run Optimization
+      </button>
+      <div id="o-error" class="hidden"></div>
+      <div id="o-results" class="hidden mt-16"></div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════
+         PANEL 3 — Missing Parameter
+    ══════════════════════════════════════ -->
+    <div id="panel-missing" class="panel">
+      <div class="page-header">
+        <h2>Missing Parameter Solver</h2>
+        <p>Leave one field blank — the solver works out the safest feasible value for it.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">What do you want to solve for?</div>
+        <div class="row row-2">
+          <div>
+            <label>Solve for</label>
+            <select id="m-missing" onchange="updateMissingUI()">
+              <option value="load">Maximum Allowable Load</option>
+              <option value="length">Maximum Permissible Span</option>
+              <option value="section">Lightest Safe Section</option>
+              <option value="material">Most Suitable Material</option>
+            </select>
+          </div>
+          <div>
+            <label>Serviceability Limit</label>
+            <select id="m-defl-limit">
+              <option value="L/360">L/360 — floors</option>
+              <option value="L/250">L/250 — roofs</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Beam Type</div>
+        <div class="row row-2">
+          <div>
+            <label>Beam Type</label>
+            <select id="m-beam-type">
+              <option value="Simply Supported">Simply Supported</option>
+              <option value="Cantilever">Cantilever</option>
+              <option value="Fixed-Fixed">Fixed-Fixed</option>
+            </select>
+          </div>
+          <div id="m-length-wrap">
+            <label>Beam Length (m)</label>
+            <input type="number" id="m-length" value="6" min="0.1" step="0.1">
+          </div>
+        </div>
+        <p class="text-muted mt-8" id="m-length-note" style="display:none">
+          Length is the unknown — beam type is set manually above.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Load (single governing load)</div>
+        <div class="tab-row">
+          <button class="tab-btn active" id="m-tab-point" onclick="setLoadTab('m','point')">Point Load</button>
+          <button class="tab-btn" id="m-tab-udl" onclick="setLoadTab('m','udl')">UDL</button>
+        </div>
+        <div id="m-point-inputs" class="row row-2 mb-8">
+          <div>
+            <label>Magnitude (kN) <span id="m-load-hint" class="text-muted">— leave blank to solve for this</span></label>
+            <input type="number" id="m-P" placeholder="blank = solve for this" step="0.1" min="0">
+          </div>
+          <div>
+            <label>Position (m or fraction of span)</label>
+            <input type="number" id="m-Pa" placeholder="e.g. 3" step="0.1" min="0">
+          </div>
+        </div>
+        <div id="m-udl-inputs" class="row row-3 mb-8 hidden">
+          <div><label>Intensity (kN/m)</label><input type="number" id="m-w" placeholder="blank = solve for this" step="0.1" min="0"></div>
+          <div><label>Start (m)</label><input type="number" id="m-ws" placeholder="0" step="0.1" min="0"></div>
+          <div><label>End (m)</label><input type="number" id="m-we" placeholder="6" step="0.1" min="0"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Material &amp; Section</div>
+        <div class="row row-2">
+          <div id="m-material-wrap">
+            <label>Material <span id="m-mat-hint" class="text-muted"></span></label>
+            <select id="m-material">
+              {% for m in materials %}<option>{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div id="m-section-wrap">
+            <label>IPE Section <span id="m-sec-hint" class="text-muted"></span></label>
+            <select id="m-section">
+              {% for s in sections %}<option>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="m-run-btn" onclick="runMissing()">
+        Solve
+      </button>
+      <div id="m-error" class="hidden"></div>
+      <div id="m-results" class="hidden mt-16"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   State
+═══════════════════════════════════════════════════════ */
+const state = {
+  s: { supports: [], loads: [], loadTab: 'point', sectionMode: 'manual' },
+  o: { supports: [], loads: [], loadTab: 'point' },
+  m: { loads: [], loadTab: 'point' },
+};
+
+/* ═══════════════════════════════════════════════════════
+   Navigation
+═══════════════════════════════════════════════════════ */
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('panel-' + el.dataset.panel).classList.add('active');
+  });
+});
+
+/* ═══════════════════════════════════════════════════════
+   Supports
+═══════════════════════════════════════════════════════ */
+function addSupport(prefix) {
+  const type = document.getElementById(prefix + '-sup-type').value;
+  const pos  = parseFloat(document.getElementById(prefix + '-sup-pos').value);
+  if (isNaN(pos)) { alert('Enter a valid position.'); return; }
+  state[prefix].supports.push({ type, position: pos });
+  renderSupports(prefix);
+  classifySupports(prefix);
+}
+
+function removeSupport(prefix, idx) {
+  state[prefix].supports.splice(idx, 1);
+  renderSupports(prefix);
+  classifySupports(prefix);
+}
+
+function renderSupports(prefix) {
+  const el = document.getElementById(prefix + '-support-list');
+  el.innerHTML = state[prefix].supports.map((s, i) => `
+    <div class="support-row">
+      <span class="badge badge-${s.type.toLowerCase()}">${s.type}</span>
+      <span class="support-pos">@ ${s.position} m</span>
+      <button class="remove-btn" onclick="removeSupport('${prefix}',${i})">×</button>
+    </div>`).join('');
+}
+
+function classifySupports(prefix) {
+  const L = parseFloat(document.getElementById(prefix + '-length').value);
+  const el = document.getElementById(prefix + '-classify-result');
+  if (!state[prefix].supports.length || isNaN(L)) { el.innerHTML = ''; return; }
+  fetch('/api/classify_supports', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ supports: state[prefix].supports, L }),
+  }).then(r => r.json()).then(data => {
+    if (data.error) {
+      el.innerHTML = `<div class="classify-pill pill-err">✗ ${data.error}</div>`;
+    } else {
+      el.innerHTML = `<div class="classify-pill pill-ok">✓ ${data.beam_type}</div>`;
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   Loads
+═══════════════════════════════════════════════════════ */
+function setLoadTab(prefix, tab) {
+  state[prefix].loadTab = tab;
+  document.getElementById(prefix + '-tab-point').classList.toggle('active', tab === 'point');
+  document.getElementById(prefix + '-tab-udl').classList.toggle('active', tab === 'udl');
+  document.getElementById(prefix + '-point-inputs').classList.toggle('hidden', tab !== 'point');
+  document.getElementById(prefix + '-udl-inputs').classList.toggle('hidden', tab !== 'udl');
+}
+
+function addLoad(prefix) {
+  const tab = state[prefix].loadTab;
+  if (tab === 'point') {
+    const P = parseFloat(document.getElementById(prefix + '-P').value);
+    const a = parseFloat(document.getElementById(prefix + '-Pa').value);
+    if (isNaN(P) || isNaN(a)) { alert('Enter load magnitude and position.'); return; }
+    state[prefix].loads.push({ type: 'point', P, a });
+  } else {
+    const w  = parseFloat(document.getElementById(prefix + '-w').value);
+    const ws = parseFloat(document.getElementById(prefix + '-ws').value || 0);
+    const we = parseFloat(document.getElementById(prefix + '-we').value);
+    if (isNaN(w) || isNaN(we)) { alert('Enter UDL intensity and end position.'); return; }
+    state[prefix].loads.push({ type: 'udl', w, start: ws || 0, end: we });
+  }
+  renderLoads(prefix);
+}
+
+function removeLoad(prefix, idx) {
+  state[prefix].loads.splice(idx, 1);
+  renderLoads(prefix);
+}
+
+function renderLoads(prefix) {
+  const el = document.getElementById(prefix + '-load-list');
+  el.innerHTML = state[prefix].loads.map((ld, i) => {
+    const desc = ld.type === 'point'
+      ? `Point ${ld.P} kN @ ${ld.a} m`
+      : `UDL ${ld.w} kN/m from ${ld.start}–${ld.end} m`;
+    return `<div class="load-row">
+      <span class="badge badge-pin">${ld.type === 'point' ? 'PL' : 'UDL'}</span>
+      <span class="load-info">${desc}</span>
+      <button class="remove-btn" onclick="removeLoad('${prefix}',${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   Section mode (manual / auto)
+═══════════════════════════════════════════════════════ */
+function setSectionMode(prefix, mode) {
+  state[prefix].sectionMode = mode;
+  document.getElementById(prefix + '-tab-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById(prefix + '-tab-auto').classList.toggle('active', mode === 'auto');
+  document.getElementById(prefix + '-section-wrap').classList.toggle('hidden', mode === 'auto');
+}
+
+/* ═══════════════════════════════════════════════════════
+   Missing-param UI update
+═══════════════════════════════════════════════════════ */
+function updateMissingUI() {
+  const missing = document.getElementById('m-missing').value;
+  const lengthWrap   = document.getElementById('m-length-wrap');
+  const lengthNote   = document.getElementById('m-length-note');
+  const loadHint     = document.getElementById('m-load-hint');
+  const matHint      = document.getElementById('m-mat-hint');
+  const secHint      = document.getElementById('m-sec-hint');
+
+  lengthWrap.style.opacity  = missing === 'length'   ? '.4' : '1';
+  lengthWrap.querySelector('input').disabled = missing === 'length';
+  lengthNote.style.display  = missing === 'length'   ? 'block' : 'none';
+
+  loadHint.textContent = missing === 'load'     ? '— solving for this' : '';
+  matHint.textContent  = missing === 'material' ? '— solving for this' : '';
+  secHint.textContent  = missing === 'section'  ? '— solving for this' : '';
+}
+
+/* ═══════════════════════════════════════════════════════
+   Helpers
+═══════════════════════════════════════════════════════ */
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span> Running…';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.orig;
+    btn.disabled = false;
+  }
+}
+
+function showError(prefix, msg) {
+  const el = document.getElementById(prefix + '-error');
+  el.className = 'inline-error mt-16';
+  el.innerHTML = '<strong>Error:</strong> ' + msg.replace(/\n/g, '<br>');
+}
+
+function clearError(prefix) {
+  const el = document.getElementById(prefix + '-error');
+  el.className = 'hidden';
+  el.innerHTML = '';
+}
+
+function resultMetrics(r) {
+  return `
+  <div class="result-grid">
+    <div class="metric">
+      <div class="metric-label">Max Shear</div>
+      <div class="metric-value val-blue">${r.max_shear.toFixed(2)}</div>
+      <div class="metric-unit">kN</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Max Moment</div>
+      <div class="metric-value val-green">${r.max_moment.toFixed(2)}</div>
+      <div class="metric-unit">kN·m</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Max Deflection</div>
+      <div class="metric-value val-purple">${r.max_deflection_mm.toFixed(3)}</div>
+      <div class="metric-unit">mm (limit ${r.allowable_defl_mm.toFixed(2)} mm)</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Max Bending Stress</div>
+      <div class="metric-value val-amber">${r.max_stress_mpa.toFixed(2)}</div>
+      <div class="metric-unit">MPa</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Safety Factor</div>
+      <div class="metric-value" style="color:${r.safety_factor>=2?'#34d399':r.safety_factor>=1.5?'#fbbf24':'#f87171'}">${r.safety_factor.toFixed(2)}</div>
+      <div class="metric-unit">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Defl. Limit</div>
+      <div class="metric-value" style="font-size:15px;color:var(--muted)">${r.deflection_limit}</div>
+      <div class="metric-unit">serviceability</div>
+    </div>
+  </div>
+  <div class="check-row">
+    <div class="check-badge ${r.stress_pass?'check-pass':'check-fail'}">${r.stress_pass?'✓':'✗'} Stress</div>
+    <div class="check-badge ${r.deflection_pass?'check-pass':'check-fail'}">${r.deflection_pass?'✓':'✗'} Deflection</div>
+    <div class="check-badge ${r.overall_pass?'check-pass':'check-fail'}">${r.overall_pass?'✓':'✗'} Overall</div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   STANDARD ANALYSIS — run
+═══════════════════════════════════════════════════════ */
+async function runAnalysis() {
+  clearError('s');
+  const L = parseFloat(document.getElementById('s-length').value);
+  const material = document.getElementById('s-material').value;
+  const section  = document.getElementById('s-section').value;
+  const defl     = document.getElementById('s-defl-limit').value;
+  const mode     = state['s'].sectionMode;
+
+  if (!state.s.supports.length) { showError('s', 'Add at least one support.'); return; }
+  if (!state.s.loads.length)    { showError('s', 'Add at least one load.'); return; }
+
+  setLoading('s-run-btn', true);
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        L, supports: state.s.supports, loads: state.s.loads,
+        material, section, deflection_limit: defl, mode,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { showError('s', data.error); return; }
+
+    const r = data.result;
+    let html = `
+      <div class="card">
+        <div class="card-title">Results — ${data.beam_type} · ${data.section}</div>
+        ${mode === 'auto' && data.auto_found ? `
+        <div class="check-row" style="margin-bottom:12px">
+          <div class="check-badge check-pass">✓ Recommended Section: ${data.section} · ${data.weight_per_m} kg/m</div>
+        </div>` : ''}
+        <div class="status-banner ${r.overall_pass ? 'status-pass' : 'status-fail'}">
+          ${r.overall_pass ? '✓ Design PASS' : '✗ Design FAIL'}
+        </div>
+        ${resultMetrics(r)}
+        ${data.advisor ? `<div class="advisor-box"><h4>⚠ Design Advisor</h4><pre>${data.advisor}</pre></div>` : ''}
+        <div class="plot-wrap"><img src="data:image/png;base64,${data.plot_b64}" alt="Analysis Plot"></div>
+      </div>`;
+
+    const resultsEl = document.getElementById('s-results');
+    resultsEl.innerHTML = html;
+    resultsEl.classList.remove('hidden');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e) {
+    showError('s', e.message);
+  } finally {
+    setLoading('s-run-btn', false);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   OPTIMIZATION — run
+═══════════════════════════════════════════════════════ */
+async function runOptimize() {
+  clearError('o');
+  const L     = parseFloat(document.getElementById('o-length').value);
+  const defl  = document.getElementById('o-defl-limit').value;
+  const obj   = document.getElementById('o-objective').value;
+
+  if (!state.o.supports.length) { showError('o', 'Add at least one support.'); return; }
+  if (!state.o.loads.length)    { showError('o', 'Add at least one load.'); return; }
+
+  setLoading('o-run-btn', true);
+  try {
+    const res = await fetch('/api/optimize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        L, supports: state.o.supports, loads: state.o.loads,
+        objective: obj, deflection_limit: defl,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { showError('o', data.error); return; }
+
+    const r = data.result;
+    let html = `
+      <div class="card">
+        <div class="card-title">Optimized Design — ${data.objective_label}</div>
+        <div class="status-banner status-pass">✓ Design PASS</div>
+        <div class="result-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px">
+          <div class="metric">
+            <div class="metric-label">Selected Material</div>
+            <div class="metric-value" style="font-size:16px;color:var(--accent)">${data.material}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Recommended Section</div>
+            <div class="metric-value" style="font-size:16px;color:var(--accent2)">${data.section}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Weight / metre</div>
+            <div class="metric-value val-blue">${data.weight_per_m.toFixed(2)}</div>
+            <div class="metric-unit">kg/m</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Material Cost / metre</div>
+            <div class="metric-value val-amber">$${data.cost_per_m.toFixed(2)}</div>
+            <div class="metric-unit">per metre</div>
+          </div>
+        </div>
+        ${resultMetrics(r)}
+        <p class="text-muted mt-8">Searched ${data.n_total} combinations — ${data.n_feasible} were feasible.</p>
+        <div class="plot-wrap"><img src="data:image/png;base64,${data.plot_b64}" alt="Optimization Plot"></div>
+      </div>`;
+
+    const resultsEl = document.getElementById('o-results');
+    resultsEl.innerHTML = html;
+    resultsEl.classList.remove('hidden');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e) {
+    showError('o', e.message);
+  } finally {
+    setLoading('o-run-btn', false);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MISSING PARAM — run
+═══════════════════════════════════════════════════════ */
+async function runMissing() {
+  clearError('m');
+  const missing    = document.getElementById('m-missing').value;
+  const beam_type  = document.getElementById('m-beam-type').value;
+  const L          = missing === 'length' ? null : parseFloat(document.getElementById('m-length').value);
+  const material   = missing === 'material' ? null : document.getElementById('m-material').value;
+  const section    = missing === 'section'  ? null : document.getElementById('m-section').value;
+  const defl       = document.getElementById('m-defl-limit').value;
+
+  // Build the one load
+  const tab = state.m.loadTab;
+  let loads;
+  if (tab === 'point') {
+    const P = parseFloat(document.getElementById('m-P').value) || (missing === 'load' ? 1 : NaN);
+    const a = parseFloat(document.getElementById('m-Pa').value);
+    if (isNaN(a)) { showError('m', 'Enter the load position.'); return; }
+    loads = [{ type: 'point', P: missing === 'load' ? 1 : P, a }];
+  } else {
+    const w  = parseFloat(document.getElementById('m-w').value) || (missing === 'load' ? 1 : NaN);
+    const ws = parseFloat(document.getElementById('m-ws').value || 0);
+    const we = parseFloat(document.getElementById('m-we').value || L || 6);
+    loads = [{ type: 'udl', w: missing === 'load' ? 1 : w, start: ws, end: we }];
+  }
+
+  const payload = {
+    missing, beam_type, loads, deflection_limit: defl,
+    L: L || undefined,
+    material: material || undefined,
+    section:  section  || undefined,
+    load_position_fraction: tab === 'point'
+      ? (parseFloat(document.getElementById('m-Pa').value) / (L || 6))
+      : 0.5,
+  };
+
+  setLoading('m-run-btn', true);
+  try {
+    const res  = await fetch('/api/missing_param', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { showError('m', data.error); return; }
+
+    const labels = {
+      load: 'Maximum Allowable Load', length: 'Maximum Permissible Span',
+      section: 'Recommended Section', material: 'Recommended Material',
+    };
+
+    const r = data.result;
+    let html = `
+      <div class="card">
+        <div class="card-title">Solved: ${labels[missing]}</div>
+        <div class="solved-highlight">
+          <div class="label">${labels[missing]}</div>
+          <div class="value">${data.solved}</div>
+        </div>
+        ${data.weight_per_m ? `<p class="text-muted mb-8">Weight per metre: ${data.weight_per_m} kg/m</p>` : ''}
+        ${resultMetrics(r)}
+        <div class="plot-wrap"><img src="data:image/png;base64,${data.plot_b64}" alt="Solver Plot"></div>
+      </div>`;
+
+    const resultsEl = document.getElementById('m-results');
+    resultsEl.innerHTML = html;
+    resultsEl.classList.remove('hidden');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e) {
+    showError('m', e.message);
+  } finally {
+    setLoading('m-run-btn', false);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Init
+═══════════════════════════════════════════════════════ */
+// Trigger classify when length field changes
+['s','o'].forEach(prefix => {
+  const el = document.getElementById(prefix + '-length');
+  if (el) el.addEventListener('input', () => classifySupports(prefix));
+});
+updateMissingUI();
+</script>
+</body>
+</html>
